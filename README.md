@@ -1,2 +1,2 @@
 # JustAnotherTrafficSimulation
-Doing traffic simulation as out project using a directed graph.
+Doing traffic simulation as our project using a directed graph.
