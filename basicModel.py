@@ -7,19 +7,20 @@ import numpy.random as rd
 #%% Functions:
 
 def plotGrid(P):
-  nodeMatrix = P.nodes()
-  n = np.shape(nodeMatrix)[0]
-  for i in range(0,n):
-    plt.plot(nodeMatrix[i][0],nodeMatrix[i][1],'bo')
-    
+  pos = nx.get_node_attributes(G,'pos')
+  nx.draw_networkx_nodes(P,pos)
+
   edgeMatrix = P.edges()
   m = np.shape(edgeMatrix)[0]
   for i in range(0,m):
-    plt.plot(np.array([edgeMatrix[i][0][0],edgeMatrix[i][1][0]]), 
-        np.array([edgeMatrix[i][0][1],edgeMatrix[i][1][1]]),'k') 
-        #TODO: Make color map depending on 'vel'
-        #TODO: Make two lanes
     
+    dify = 0.05*(edgeMatrix[i][0][0] < edgeMatrix[i][1][0])-0.025
+    difx = 0.05*(edgeMatrix[i][0][1] < edgeMatrix[i][1][1])-0.025
+    
+    plt.plot(np.array([edgeMatrix[i][0][0] + difx, edgeMatrix[i][1][0] + difx]), 
+        np.array([edgeMatrix[i][0][1] + dify, edgeMatrix[i][1][1] + dify]),'k') 
+        #TODO: Make color map depending on 'vel'
+        #TODO: Make it prety
 def edgeVelocity(distance, nCars, vMax, vMin):
    maxCars = distance/5
    v = (vMin-vMax)/(maxCars-maxCars/2) * (nCars - maxCars/2) + vMax
@@ -44,8 +45,5 @@ for pos, data in G.nodes(data=True):
     data['pos'] = pos
 
 #%% THE REST!
-
-pos = nx.get_node_attributes(G,'pos')
-nx.draw(G, pos)
 
 plotGrid(G)
