@@ -1,6 +1,0 @@
-[] Pick a simple question/model and implement it within around 1 week.
-[] Have one-two simple specific research question.
-[] Run the model and evaluate it.
-[] Put the results into a working document (plots, model description, question).
-[] Do this within 7-10 days.
-[] We decide new meeting time (in ~2 weeks) over e-mail.
