@@ -153,3 +153,4 @@ for i in range(0,nRepetition):
     if (nAgentType2)!= 0:
         print('Historical Information: ' + str(cumulativeTime2/(nAgentType2)))
         timeEvolution2[i] = cumulativeTime2/(nAgentType2)
+        
