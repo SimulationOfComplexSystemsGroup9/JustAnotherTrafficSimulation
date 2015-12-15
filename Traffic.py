@@ -222,9 +222,7 @@ class BasicTrafficModel:
                 realWeights = True
             else:
                 node = self.G.node[v]['pos']
-                if abs(center[0] - node[0])< infoRange and abs(center[1] - node[1])< infoRange:
-                    print(center)
-                    print(node)
+                if abs(center[0] - node[0]) <= infoRange and abs(center[1] - node[1])<= infoRange:
                     realWeights = True
             for u, e in G_succ[v].items():
                 if realWeights:

@@ -1,10 +1,10 @@
-import BasicTrafficModel
+import Traffic
 import importlib
 import numpy as np
 import numpy.random as rd
 import matplotlib.pyplot as plt
-BasicTrafficModel = importlib.reload(BasicTrafficModel)
-BSM = BasicTrafficModel.BasicTrafficModel
+Traffic = importlib.reload(Traffic)
+BSM = Traffic.BasicTrafficModel
 
 #%% Random Run
 
@@ -18,13 +18,14 @@ start = rd.randint(10, size = [nRCars,2] )
 finish = rd.randint(10, size = [nRCars,2] )
 
 t = 0
-while not :
+while not a.isDone():
     a.grabCurrentCarNumbers()
     a.moveCars()
     a.updatePlot()
+    
     if t < nRCars:
         for i in range(carsPerTimeStep):
-            a.addNewCar(start[t], finish[t])
+            a.addNewCar(start[t], finish[t],local = 1,infoRange = 2)
             t += 1
         
 #%%simpleRun
