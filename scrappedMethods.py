@@ -58,7 +58,6 @@ def Simulation1(nRuns):
   ax.legend(prop={'size': 10})
   ax.set_title('2 agent traffic simulation')
   plt.show()
-  plt.savefig('/Users/beinwaubertdepuiseau/Dropbox/Kursmaterial/Simulation of Complex Systems/Project/InitialSim3.pdf', format = 'pdf', dpi = 1000)
 
 def Simulation2(nRuns):
   #t1 = np.zeros(nRuns)
@@ -85,4 +84,23 @@ def Simulation2(nRuns):
   ax.legend(prop={'size': 10})
   ax.set_title('20 agent traffic simulation')
   plt.show()    
-  plt.savefig('/Users/beinwaubertdepuiseau/Dropbox/Kursmaterial/Simulation of Complex Systems/Project/InitialSim4.pdf', format = 'pdf', dpi = 1000)
+
+def createGraph(self, nSideTracks, length):
+    G = nx.grid_graph([length,nSideTracks*2+1])
+    mid = nSideTracks
+    if nSideTracks != 0:
+        for i in range(length):
+            if np.mod(i,3) != 0:
+                G.remove_edge((i,mid),(i,mid+1))
+                G.remove_edge((i,mid),(i,mid-1))
+          
+        G.add_edge((0,mid),(-1,mid))
+        G.add_edge((length-1,mid),(length,mid))
+        for i in range(nSideTracks):
+            G.add_edge((-1,mid),(0,mid+i+1))
+            G.add_edge((-1,mid),(0,mid-i-1))
+            G.add_edge((length,mid),(length-1,mid+i+1))
+            G.add_edge((length,mid),(length-1,mid-i-1))
+        
+    G = nx.DiGraph(G)
+    return G

@@ -1,15 +1,16 @@
-from BasicTrafficModel import BasicTrafficModel
+import BasicTrafficModel
+import importlib
 import numpy as np
 import numpy.random as rd
 import matplotlib.pyplot as plt
-
-
+BasicTrafficModel = importlib.reload(BasicTrafficModel)
+BSM = BasicTrafficModel.BasicTrafficModel
 
 #%% Random Run
 timeSteps = 100 
 size = [10, 10]
 carsPerTimeStep = 2
-a = BasicTrafficModel(size=size)
+a = BSM(size=size)
 a.initializePlot()
 t = 0
 a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])))
@@ -19,12 +20,11 @@ while not a.isDone():
     plt.pause(0.001)
     if t < timeSteps:
         for i in range(carsPerTimeStep):
-            a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])))
+            a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])),local = 1)
         t += 1
-
         
 #%%simpleRun
-a = BasicTrafficModel()
+a = BSM()
 a.initializePlot()
 t=0
 a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])))
@@ -40,30 +40,30 @@ while not a.isDone():
 
 
 #%% simpleRun2
-timeSteps = 100
-a = BasicTrafficModel()
+timeSteps = 500
+a = BSM()
 nCars = [ [] for i in range(timeSteps)]
 a.addNewCar((0,4), (9,4),local = 0)
 i = 0
 while not a.isDone():
     nCars[i] = a.grabCurrentCarNumbers()
     a.moveCars()
-    a.addNewCar((0,4), (9,4),local= 0)
-    a.addNewCar((0,4), (9,4),local= 0)
+    if i % 10 == 0:
+        a.addNewCar((0,4), (9,4),local= 0)
+        a.addNewCar((0,4), (9,4),local= 0)
     i += 1
     if i == timeSteps:
         break
-
 nCars = np.array(nCars)
 
-b = BasicTrafficModel()
+b = BSM()
 b.addNewCar((0,4), (9,4),local = 0)
-[axH, poPl1,poPl2,poPl3, fig] = a.initializePlot()
+b.initializePlot()
 i = 0
 while not a.isDone():
     b.setAverageCarNumber(nCars[i])
     b.moveCars()
-    b.updatePlot(axH, poPl1,poPl2,poPl3, fig)
+    b.updatePlot()
     b.addNewCar((0,4), (9,4),local= 0)
     b.addNewCar((0,4), (9,4),local= 0)
     if np.mod(i,20) == 0:
@@ -75,22 +75,21 @@ while not a.isDone():
 #%% simpleRun3
 timeSteps = 3000
 sizeA = [10,7]
-
 start = (0,3)
 target = (9,3)
 spawnFreq = 5
 plotFreq = 3000
-predictingFraction = 1
-nRepetition = 10
+predictingFraction = 0.5
+fractionChange = True
+nRepetition = 20
 timeEvolution0=np.zeros((nRepetition,))
 timeEvolution1=np.zeros((nRepetition,))
 timeEvolution2=np.zeros((nRepetition,))
-
+predFracEvolution=np.zeros((nRepetition,))
 def runScenario(sizeA, timeSteps, start, target, spawnFreq, plotFreq, 
                 nCars, predictingFraction): 
 
-    a = BasicTrafficModel(size = sizeA)
-    a.initializePlot()
+    a = BSM(size = sizeA)
     i = 0
     nEdges = a.G.number_of_edges()
     nCarsNew = np.zeros((timeSteps,nEdges))
@@ -114,10 +113,6 @@ def runScenario(sizeA, timeSteps, start, target, spawnFreq, plotFreq,
         i += 1
         if i%100 == 0:
             print(str(i) + '/' + str(timeSteps))
-            
-        if i%plotFreq == 0:
-            a.updatePlot()
-            plt.pause(0.001)
 
     return np.array(nCarsNew), a
     
@@ -153,4 +148,16 @@ for i in range(0,nRepetition):
     if (nAgentType2)!= 0:
         print('Historical Information: ' + str(cumulativeTime2/(nAgentType2)))
         timeEvolution2[i] = cumulativeTime2/(nAgentType2)
+    if fractionChange==True:
+        if timeEvolution0[i]<timeEvolution2[i]:
+            predictingFraction = max(predictingFraction*0.8,0)
+        else:
+            predictingFraction = min(predictingFraction*1.2,1)
+        predFracEvolution[i]= predictingFraction
         
+plt.figure()    
+plt.plot(timeEvolution0)            
+plt.plot(timeEvolution2)
+if fractionChange==True:
+    plt.figure()
+    plt.plot(predFracEvolution)        

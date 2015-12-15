@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy.random as rd
-import matplotlib.cm as cm
-
+from heapq import heappop, heappush
+from itertools import count
 class BasicTrafficModel:
     
     
@@ -14,16 +13,14 @@ class BasicTrafficModel:
         self.vMax = vMax
         self.G = nx.DiGraph(nx.grid_graph(size))
         self.simpleG = self.G.copy()
+        self.minWeight = distance/vMax
         
         for _, _, edgeData in self.G.edges_iter(data=True): #CodingLife #BestGroup
             edgeData['dist'] = distance
             edgeData['nCars'] = 0
             edgeData['traverseT'] = lambda eD = edgeData: eD['dist']/self.edgeVelocity(eD['nCars'])
             edgeData['weight'] = edgeData['traverseT']()
-        
-        for _, _, edgeData in self.simpleG.edges_iter(data=True): #For adding only local information
-            edgeData['weight'] = distance/vMax
-            
+                    
         for pos, data in self.G.nodes(data=True):
             data['pos'] = pos  
             
@@ -41,11 +38,11 @@ class BasicTrafficModel:
                 if len(car['path']) > 2: # Is the car not done
 
                     if car['local'] == 0:
-                        newPath = nx.shortest_path(self.G,car['path'][1],car['path'][-1], weight = 'weight')
+                        newPath = self.shortestPath(car['path'][1], car['path'][-1], weight = 'weight')
                     elif car['local'] == 1:
-                        newPath = self.localShortestPath(car['path'][1],car['path'][-1])
+                        newPath = self.shortestPath(car['path'][1], car['path'][-1], weight = 'weight', infoRange = car['infoR'])
                     elif car['local'] == 2:
-                        newPath = self.shortestPathUsingAverage(car['path'][1],car['path'][-1], self.nCarsAv)                    
+                        newPath = self.shortestPath(car['path'][1], car['path'][-1], weight = 'histWeight')
                     newEdge = self.G[newPath[0]][newPath[1]]
 
                     if newEdge['nCars'] < newEdge['dist']/10:
@@ -66,7 +63,11 @@ class BasicTrafficModel:
 
     def setAverageCarNumber(self, avCars):
         self.nCarsAv = avCars
-    
+        i = 0
+        for _, _, edgeData in self.G.edges_iter(data=True):
+            edgeData['histWeight'] = (edgeData['weight'] + edgeData['dist']/self.edgeVelocity(self.nCarsAv[i]))/2.0
+            i += 1
+
     def getCarEdge(self, car):
         path = car['path']
         return self.G[ path[car['edge']] ][ path[ car['edge'] + 1 ] ]
@@ -74,17 +75,18 @@ class BasicTrafficModel:
     def isDone(self):
         return len(self.cars) == 0
 
-    def addNewCar(self, start, target, local = 0):
+    def addNewCar(self, start, target, local = 0, infoRange = 0):
         if start == target:
             return
       
-        car = {'edge':0,'edgeTravT':0, 'path':None, 'time':0, 'local':local, 'totaltime':0}
+        car = {'edge':0, 'edgeTravT':0, 'path':None, 'time':0, 'local':local, 'totaltime':0, 'infoR': infoRange}
+        
         if local == 0:
-            path = nx.shortest_path(self.G,start,target, weight='weight')
+            path = self.shortestPath(start, target, weight = 'weight')
         elif local == 1:
-            path = self.localShortestPath(start,target)
+            path = self.shortestPath(start, target, weight = 'weight', infoRange = infoRange)
         elif local == 2:
-            path = self.shortestPathUsingAverage(start,target, self.nCarsAv)
+            path = self.shortestPath(start, target, weight = 'histWeight')
         
         car['path'] = path
         self.G[path[0]][path[1]]['nCars'] += 1
@@ -155,52 +157,86 @@ class BasicTrafficModel:
     
     def grabCurrentCarNumbers(self):
         return [edge['nCars'] for _, _, edge in self.G.edges_iter(data=True)]
+        
+        
+    def shortestPath(self, source, target, weight, infoRange = None):
+        """Implementation of Dijkstra's algorithm, based on 
+        implementation in networkx.
+    
+        Parameters
+        ----------
+        G : NetworkX graph
+    
+        source : node label
+           Starting node for path
+           
+        target : node label
+           Ending node for path
+    
+        weight: key for weights
+            Key to use on edges to get the weight
+    
+        infoRange: int, optional,
+            Defining usage of weight, higher means further from source
+            eeeh 
+    
 
-    def localShortestPath(self, start, target, infoRange = 2):
+    
+        Returns
+        -------
+        path
+           Returns the shortest path from the source to target.
+           
         
-        P = self.simpleG.copy()
-        
-        def copyEdgeWeights(infoRange, start):
-            for node in P[start]:
-                P[start][node]['weight'] =  self.G[start][node]['weight']
-                if infoRange>1:
-                    copyEdgeWeights(infoRange-1, node)
-        
-        copyEdgeWeights(infoRange,start)
-        
-        localShortestPath = nx.shortest_path(P, start, target, weight = 'weight')
-        return localShortestPath
-        
-    def shortestPathUsingAverage(self, start, target, nCarsAv):
-        i = 0
-        for _, _, edgeData in self.G.edges_iter(data=True):
-            edgeData['weight'] = (edgeData['weight'] + edgeData['dist']/self.edgeVelocity(nCarsAv[i]))/2.0
-            i += 1
-        
-        shortestPath = nx.shortest_path(self.G, start, target, weight = 'weight')
-        
-        for _, _, edgeData in self.G.edges_iter(data=True):
-            edgeData['weight'] = edgeData['traverseT']()
+        """
+        #get_weight = lambda u, v, data: data.get(weight, 1)
+        if source == target:
+            return ({source: 0}, {source: [source]})
             
-        return shortestPath
+        if infoRange is not None:
+            center = self.G.node[source]['pos']
+
+        get_weight = lambda u, v, data: data.get(weight, 1)
+        paths = {source: [source]}        
         
-    def createGraph(self, nSideTracks, length):
-        G = nx.grid_graph([length,nSideTracks*2+1])
-        mid = nSideTracks
-        if nSideTracks != 0:
-            for i in range(length):
-                if np.mod(i,3) != 0:
-                    G.remove_edge((i,mid),(i,mid+1))
-                    G.remove_edge((i,mid),(i,mid-1))
-              
-            G.add_edge((0,mid),(-1,mid))
-            G.add_edge((length-1,mid),(length,mid))
-            for i in range(nSideTracks):
-                G.add_edge((-1,mid),(0,mid+i+1))
-                G.add_edge((-1,mid),(0,mid-i-1))
-                G.add_edge((length,mid),(length-1,mid+i+1))
-                G.add_edge((length,mid),(length-1,mid-i-1))
-            
-        G = nx.DiGraph(G)
-        return G
+        G_succ = self.G.succ if self.G.is_directed() else self.G.adj
         
+        
+        push = heappush
+        pop = heappop
+        dist = {}  # dictionary of final distances
+        seen = {source: 0}
+        c = count()
+        fringe = []  # use heapq with (distance,label) tuples
+        push(fringe, (0, next(c), source))
+        while fringe:
+            (d, cnt, v) = pop(fringe)
+            if v in dist:
+                continue  # already searched this node.
+            dist[v] = d
+            if v == target:
+                break
+            if infoRange is None:
+                realWeights = True
+            elif cnt == 0 or np.all(np.abs(np.array(center) - np.array(self.G.node[v]['pos'])) < infoRange):
+                realWeights = True
+            for u, e in G_succ[v].items():
+                if realWeights:
+                    cost = get_weight(v, u, e)
+                else:
+                    cost = self.minWeight
+                if cost is None:
+                    continue
+                vu_dist = dist[v] + cost
+
+                if u not in seen or vu_dist < seen[u]:
+                    seen[u] = vu_dist
+                    push(fringe, (vu_dist, next(c), u))
+                    if paths is not None:
+                        paths[u] = paths[v] + [u]
+                
+        try:
+            return paths[target]
+        except KeyError:
+            raise nx.NetworkXNoPath(
+                "node %s not reachable from %s" % (source, target))
