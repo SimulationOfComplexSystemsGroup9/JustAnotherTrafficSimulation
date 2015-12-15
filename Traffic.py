@@ -73,9 +73,11 @@ class BasicTrafficModel:
         return self.G[ path[car['edge']] ][ path[ car['edge'] + 1 ] ]
     
     def isDone(self):
-        return len(self.cars) == 0
+        return len(self.cars) == 0 and len(self.doneCars) != 0
 
     def addNewCar(self, start, target, local = 0, infoRange = 0):
+        start = (start[0],start[1])
+        target = (target[0],target[1])
         if start == target:
             return
       
@@ -216,10 +218,14 @@ class BasicTrafficModel:
             dist[v] = d
             if v == target:
                 break
-            if infoRange is None:
+            if infoRange is None or cnt == 0:
                 realWeights = True
-            elif cnt == 0 or np.all(np.abs(np.array(center) - np.array(self.G.node[v]['pos'])) < infoRange):
-                realWeights = True
+            else:
+                node = self.G.node[v]['pos']
+                if abs(center[0] - node[0])< infoRange and abs(center[1] - node[1])< infoRange:
+                    print(center)
+                    print(node)
+                    realWeights = True
             for u, e in G_succ[v].items():
                 if realWeights:
                     cost = get_weight(v, u, e)

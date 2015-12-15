@@ -7,21 +7,25 @@ BasicTrafficModel = importlib.reload(BasicTrafficModel)
 BSM = BasicTrafficModel.BasicTrafficModel
 
 #%% Random Run
-timeSteps = 100 
-size = [10, 10]
+
+nRCars = 100
 carsPerTimeStep = 2
+timeSteps = nRCars //carsPerTimeStep
+size = [10, 10]
 a = BSM(size=size)
 a.initializePlot()
+start = rd.randint(10, size = [nRCars,2] )
+finish = rd.randint(10, size = [nRCars,2] )
+
 t = 0
-a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])))
-while not a.isDone():
+while not :
+    a.grabCurrentCarNumbers()
     a.moveCars()
     a.updatePlot()
-    plt.pause(0.001)
-    if t < timeSteps:
+    if t < nRCars:
         for i in range(carsPerTimeStep):
-            a.addNewCar((rd.randint(size[0]),rd.randint(size[1])),(rd.randint(size[0]),rd.randint(size[1])),local = 1)
-        t += 1
+            a.addNewCar(start[t], finish[t])
+            t += 1
         
 #%%simpleRun
 a = BSM()
@@ -161,3 +165,46 @@ plt.plot(timeEvolution2)
 if fractionChange==True:
     plt.figure()
     plt.plot(predFracEvolution)        
+    
+#%% histogram
+timeSteps = 5000
+nCars = 400
+spawnT = 5
+
+endTimes =[ [] for i in range(4)]
+for k in range(4):
+    typ = k-1
+    i = 0
+    a = BSM(size = [10,7])
+    nEdges = a.G.number_of_edges()
+    z = np.zeros((nEdges,))
+    if typ==0:
+        nCars =[ z for i in range(timeSteps)]
+    elif typ==2:
+        a.setAverageCarNumber(z)
+        
+    a.addNewCar((0,3), (9,3),local= typ)
+    
+    while not a.isDone():
+        if typ==0:
+            nCars[i] = a.grabCurrentCarNumbers()
+        elif typ==2:
+            a.setAverageCarNumber(nCars[i])
+            
+        a.moveCars()
+        if i%spawnT==0 and i< nCars:
+            a.addNewCar((0,3), (9,3),local= typ)
+        i += 1
+    endTimes[k]= [car['totaltime'] for car in a.doneCars]    
+    
+    
+fig = plt.figure()
+ax = fig.add_subplot(111)
+colors = ['black','blue','red','green']
+plotData = np.transpose(np.vstack((endTimes[0],endTimes[1],endTimes[2],endTimes[3])))
+
+ax.hist(plotData,bins = 35, normed=1, histtype='bar', color=colors, 
+        label = ['distance','global','local','history'])
+ax.set_xlabel('time')  
+ax.legend(prop={'size': 10})
+plt.show()
